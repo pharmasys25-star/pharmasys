@@ -587,14 +587,40 @@ const Reports = ({ sales, inventory, prescriptions, orders }) => {
   );
 };
 
+// ─── PERSIST HOOK ─────────────────────────────────────────────────
+function usePersist(key, seed) {
+  const [value, setRaw] = useState(() => {
+    try {
+      const stored = localStorage.getItem(key);
+      return stored ? JSON.parse(stored) : seed;
+    } catch { return seed; }
+  });
+  const setValue = (updater) => {
+    setRaw(prev => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      try { localStorage.setItem(key, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+  return [value, setValue];
+}
+
 // ─── MAIN APP ─────────────────────────────────────────────────────
 export default function App() {
   const [tab, setTab] = useState("dashboard");
   const [menuOpen, setMenuOpen] = useState(false);
-  const [inventory, setInventory] = useState(seedInventory);
-  const [prescriptions, setPrescriptions] = useState(seedPrescriptions);
-  const [sales, setSales] = useState(seedSales);
-  const [orders, setOrders] = useState(seedOrders);
+  const [inventory, setInventory] = usePersist("ps_inventory", seedInventory);
+  const [prescriptions, setPrescriptions] = usePersist("ps_prescriptions", seedPrescriptions);
+  const [sales, setSales] = usePersist("ps_sales", seedSales);
+  const [orders, setOrders] = usePersist("ps_orders", seedOrders);
+
+  // Clear all data and reset to seed (factory reset)
+  const resetAll = () => {
+    if (!window.confirm("This will delete ALL your data and reset to sample data. Are you sure?")) return;
+    ["ps_inventory","ps_prescriptions","ps_sales","ps_orders"].forEach(k => localStorage.removeItem(k));
+    setInventory(seedInventory); setPrescriptions(seedPrescriptions);
+    setSales(seedSales); setOrders(seedOrders);
+  };
 
   const navItems = [
     { key: "dashboard", label: "Dashboard", icon: "dashboard" },
@@ -651,7 +677,10 @@ export default function App() {
           ))}
         </nav>
         <div style={{ padding: "14px 20px", borderTop: "1px solid rgba(255,255,255,0.08)", fontSize: 12, color: "rgba(255,255,255,0.35)" }}>
-          v1.0 · MedCore Systems
+          <div>v1.0 · MedCore Systems</div>
+          <button onClick={resetAll} style={{ marginTop: 8, background: "rgba(239,68,68,0.15)", color: "#FCA5A5", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontSize: 11, width: "100%" }}>
+            Reset Sample Data
+          </button>
         </div>
       </aside>
 
