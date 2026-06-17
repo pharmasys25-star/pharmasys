@@ -175,10 +175,150 @@ const Dashboard = ({ inventory, prescriptions, sales, orders }) => {
   );
 };
 
+// ─── AI SCAN MODAL ────────────────────────────────────────────────
+const ScanModal = ({ onClose, onImport }) => {
+  const [stage, setStage] = useState("upload"); // upload | scanning | review
+  const [imageData, setImageData] = useState(null);
+  const [scanned, setScanned] = useState([]);
+  const [selected, setSelected] = useState({});
+  const [error, setError] = useState("");
+
+  const handleFile = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setImageData(reader.result.split(",")[1]);
+    reader.readAsDataURL(file);
+  };
+
+  const runScan = async () => {
+    if (!imageData) return;
+    setStage("scanning");
+    setError("");
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-6",
+          max_tokens: 1000,
+          messages: [{
+            role: "user",
+            content: [
+              { type: "image", source: { type: "base64", media_type: "image/jpeg", data: imageData } },
+              { type: "text", text: `You are a pharmacy inventory assistant. Look at this image of a handwritten or printed drug/medicine list.
+Extract all drug/medicine entries you can see and return ONLY a JSON array, no explanation, no markdown, just raw JSON like:
+[{"name":"Amoxicillin 500mg","category":"Antibiotics","qty":100,"reorder":20,"price":0,"expiry":"","supplier":""}]
+- name: full drug name with strength if visible
+- category: guess from drug type (Antibiotics, Pain Relief, Diabetes, Cardiovascular, Gastro, Respiratory, Vitamins, Other)
+- qty: quantity if visible, else 0
+- reorder: 20% of qty or 10 if unknown
+- price: price if visible, else 0
+- expiry: expiry date in YYYY-MM-DD if visible, else ""
+- supplier: supplier name if visible, else ""
+If you cannot read any drugs from the image, return [].` }
+            ]
+          }]
+        })
+      });
+      const data = await res.json();
+      const text = data.content?.find(b => b.type === "text")?.text || "[]";
+      const clean = text.replace(/```json|```/g, "").trim();
+      const items = JSON.parse(clean);
+      if (!Array.isArray(items) || items.length === 0) {
+        setError("No drugs found in the image. Make sure the list is clear and well-lit.");
+        setStage("upload");
+        return;
+      }
+      setScanned(items);
+      const sel = {};
+      items.forEach((_, i) => sel[i] = true);
+      setSelected(sel);
+      setStage("review");
+    } catch (err) {
+      setError("Could not read the image. Please try again with a clearer photo.");
+      setStage("upload");
+    }
+  };
+
+  const confirmImport = () => {
+    const toAdd = scanned
+      .filter((_, i) => selected[i])
+      .map(item => ({ ...item, id: Date.now() + Math.random(), qty: +item.qty || 0, reorder: +item.reorder || 10, price: +item.price || 0 }));
+    onImport(toAdd);
+    onClose();
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div style={{ background: "#fff", borderRadius: 14, width: "100%", maxWidth: 560, maxHeight: "90vh", overflowY: "auto", padding: 24 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+          <h3 style={{ fontSize: 17, fontWeight: 700, color: COLORS.navy, margin: 0 }}>📸 Scan Drug List</h3>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.slate }}><Icon name="x" size={20} /></button>
+        </div>
+
+        {stage === "upload" && (
+          <>
+            <div style={{ background: COLORS.tealLight, borderRadius: 10, padding: 16, marginBottom: 16, fontSize: 13, color: "#00695C" }}>
+              📋 Take a clear photo of your handwritten or printed drug list. Make sure the text is readable and well-lit.
+            </div>
+            {error && <div style={{ background: COLORS.redLight, color: COLORS.red, borderRadius: 8, padding: 12, marginBottom: 14, fontSize: 13 }}>{error}</div>}
+            <label style={{ display: "block", border: `2px dashed ${COLORS.teal}`, borderRadius: 10, padding: 30, textAlign: "center", cursor: "pointer", color: COLORS.teal, marginBottom: 16 }}>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>📷</div>
+              <div style={{ fontWeight: 600 }}>{imageData ? "✅ Image selected — ready to scan" : "Tap to take photo or upload image"}</div>
+              <div style={{ fontSize: 12, color: COLORS.slate, marginTop: 4 }}>Supports JPG, PNG</div>
+              <input type="file" accept="image/*" capture="environment" onChange={handleFile} style={{ display: "none" }} />
+            </label>
+            <button onClick={runScan} disabled={!imageData} style={{ width: "100%", background: imageData ? COLORS.teal : COLORS.border, color: imageData ? "#fff" : COLORS.slate, border: "none", borderRadius: 8, padding: 12, cursor: imageData ? "pointer" : "not-allowed", fontWeight: 700, fontSize: 15 }}>
+              Scan with AI →
+            </button>
+          </>
+        )}
+
+        {stage === "scanning" && (
+          <div style={{ textAlign: "center", padding: "40px 20px" }}>
+            <div style={{ fontSize: 40, marginBottom: 16 }}>🤖</div>
+            <div style={{ fontWeight: 700, color: COLORS.navy, fontSize: 16, marginBottom: 8 }}>Reading your drug list…</div>
+            <div style={{ color: COLORS.slate, fontSize: 13 }}>AI is extracting drug names, quantities and details</div>
+          </div>
+        )}
+
+        {stage === "review" && (
+          <>
+            <div style={{ background: COLORS.tealLight, borderRadius: 8, padding: 12, marginBottom: 14, fontSize: 13, color: "#00695C" }}>
+              ✅ Found <strong>{scanned.length} drugs</strong>. Tick the ones you want to import, then click Confirm.
+            </div>
+            {scanned.map((item, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 0", borderBottom: `1px solid ${COLORS.border}` }}>
+                <input type="checkbox" checked={!!selected[i]} onChange={e => setSelected(s => ({ ...s, [i]: e.target.checked }))} style={{ marginTop: 3, accentColor: COLORS.teal, width: 16, height: 16 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, color: COLORS.navy, fontSize: 14 }}>{item.name}</div>
+                  <div style={{ fontSize: 12, color: COLORS.slate }}>
+                    {item.category} · Qty: {item.qty} · Price: GH₵{item.price}
+                    {item.expiry ? ` · Exp: ${item.expiry}` : ""}
+                    {item.supplier ? ` · ${item.supplier}` : ""}
+                  </div>
+                </div>
+              </div>
+            ))}
+            <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+              <button onClick={confirmImport} style={{ flex: 1, background: COLORS.teal, color: "#fff", border: "none", borderRadius: 8, padding: 11, cursor: "pointer", fontWeight: 700 }}>
+                Import {Object.values(selected).filter(Boolean).length} Drugs
+              </button>
+              <button onClick={() => setStage("upload")} style={{ background: COLORS.slateLight, color: COLORS.slate, border: "none", borderRadius: 8, padding: 11, cursor: "pointer" }}>Rescan</button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // ─── INVENTORY ────────────────────────────────────────────────────
 const Inventory = ({ inventory, setInventory }) => {
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [showScan, setShowScan] = useState(false);
   const [form, setForm] = useState({ name: "", category: "", qty: "", reorder: "", price: "", expiry: "", supplier: "" });
 
   const filtered = inventory.filter(i => i.name.toLowerCase().includes(search.toLowerCase()) || i.category.toLowerCase().includes(search.toLowerCase()));
@@ -190,6 +330,10 @@ const Inventory = ({ inventory, setInventory }) => {
     setShowForm(false);
   };
 
+  const handleScanImport = (items) => {
+    setInventory(prev => [...prev, ...items]);
+  };
+
   const getStatus = (item) => {
     if (item.qty === 0) return <Badge label="Out of Stock" color="red" />;
     if (item.qty <= item.reorder) return <Badge label="Low Stock" color="amber" />;
@@ -198,10 +342,14 @@ const Inventory = ({ inventory, setInventory }) => {
 
   return (
     <div>
+      {showScan && <ScanModal onClose={() => setShowScan(false)} onImport={handleScanImport} />}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
         <h2 style={{ fontSize: 20, fontWeight: 700, color: COLORS.navy }}>Inventory</h2>
-        <div style={{ display: "flex", gap: 10 }}>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search drugs…" style={{ padding: "8px 14px", borderRadius: 8, border: `1px solid ${COLORS.border}`, fontSize: 14, outline: "none", width: 200 }} />
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search drugs…" style={{ padding: "8px 14px", borderRadius: 8, border: `1px solid ${COLORS.border}`, fontSize: 14, outline: "none", width: 180 }} />
+          <button onClick={() => setShowScan(true)} style={{ background: COLORS.navy, color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 14, fontWeight: 600 }}>
+            📸 Scan List
+          </button>
           <button onClick={() => setShowForm(!showForm)} style={{ background: COLORS.teal, color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 14, fontWeight: 600 }}>
             <Icon name="plus" size={16} /> Add Drug
           </button>
