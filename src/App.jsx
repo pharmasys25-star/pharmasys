@@ -277,7 +277,7 @@ Extract every single drug/medicine entry you can see and return ONLY a JSON arra
 - price: unit price as a number if visible, else 0
 - expiry: expiry date in YYYY-MM-DD format if visible, else ""
 - supplier: supplier name if visible, else ""
-Be thorough — scan every row/line in the image, even if the list is long. If you genuinely cannot find any drug names anywhere in the image, return []." }
+Be thorough — scan every row/line in the image, even if the list is long. If you genuinely cannot find any drug names anywhere in the image, return [].` }
             ]
           }]
         })
