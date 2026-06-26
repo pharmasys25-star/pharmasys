@@ -257,17 +257,15 @@ const ScanModal = ({ onClose, onImport }) => {
     setStage("scanning");
     setError("");
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const GEMINI_API_KEY = "AQ.Ab8RN6J0Ca0N8P6a0viAveDFTx7KTpQyKdqXwnFJzXq0GOSLzw";
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-sonnet-4-6",
-          max_tokens: 4000,
-          messages: [{
-            role: "user",
-            content: [
-              { type: "image", source: { type: "base64", media_type: mediaType, data: imageData } },
-              { type: "text", text: `You are a pharmacy inventory assistant. Look carefully at this image, which contains a printed or handwritten drug/medicine list (it may be a table, a list, or freeform text).
+          contents: [{
+            parts: [
+              { inline_data: { mime_type: mediaType, data: imageData } },
+              { text: `You are a pharmacy inventory assistant. Look carefully at this image, which contains a printed or handwritten drug/medicine list (it may be a table, a list, or freeform text).
 Extract every single drug/medicine entry you can see and return ONLY a JSON array, no explanation, no markdown formatting, no code fences — just raw JSON starting with [ and ending with ], like:
 [{"name":"Amoxicillin 500mg","category":"Antibiotics","qty":100,"reorder":20,"price":0,"expiry":"","supplier":""}]
 - name: full drug name with strength/dosage if visible
@@ -291,8 +289,7 @@ Be thorough — scan every row/line in the image, even if the list is long. If y
       }
 
       const data = await res.json();
-      const textBlock = data.content?.find(b => b.type === "text");
-      const text = textBlock?.text || "[]";
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
       const clean = text.replace(/```json|```/g, "").trim();
 
       let items;
