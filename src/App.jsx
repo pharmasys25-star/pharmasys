@@ -143,7 +143,7 @@ const LoginScreen = ({ onLogin }) => {
       <div style={{ background: "#fff", borderRadius: 16, padding: 32, width: "100%", maxWidth: 400 }}>
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <div style={{ fontSize: 28, marginBottom: 4 }}>💊</div>
-          <div style={{ fontSize: 20, fontWeight: 800, color: COLORS.navy }}>PharmaSys</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: COLORS.navy }}>SSMS</div>
           <div style={{ fontSize: 13, color: COLORS.slate }}>Sign in to continue</div>
         </div>
 
@@ -1032,7 +1032,7 @@ export default function App() {
       {!isMobile && (
         <aside style={{ width: 220, background: COLORS.navy, color: "#fff", display: "flex", flexDirection: "column", flexShrink: 0 }}>
           <div style={{ padding: "22px 20px 14px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-            <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: -0.5 }}>💊 PharmaSys</div>
+            <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: -0.5 }}>💊 SSMS</div>
             <div style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", marginTop: 2 }}>Management Suite</div>
           </div>
           <nav style={{ flex: 1, padding: "14px 10px" }}>
