@@ -458,10 +458,13 @@ const Inventory = ({ inventory, reload, user }) => {
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [showScan, setShowScan] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ name: "", category: "", qty: "", reorder: "", price: "", expiry: "", supplier: "" });
   const [saving, setSaving] = useState(false);
 
   const filtered = inventory.filter(i => i.name.toLowerCase().includes(search.toLowerCase()) || (i.category || "").toLowerCase().includes(search.toLowerCase()));
+
+  const resetForm = () => setForm({ name: "", category: "", qty: "", reorder: "", price: "", expiry: "", supplier: "" });
 
   const addItem = async () => {
     if (!form.name || !form.qty) return;
@@ -471,10 +474,49 @@ const Inventory = ({ inventory, reload, user }) => {
       price: +form.price || 0, expiry: form.expiry || null, supplier: form.supplier
     }]);
     await supabase.from("activity_log").insert([{ staff_id: user.id, staff_name: user.name, action: "Added drug", details: form.name }]);
-    setForm({ name: "", category: "", qty: "", reorder: "", price: "", expiry: "", supplier: "" });
+    resetForm();
     setShowForm(false);
     setSaving(false);
     reload();
+  };
+
+  const startEdit = (item) => {
+    setForm({
+      name: item.name || "", category: item.category || "", qty: String(item.qty ?? ""),
+      reorder: String(item.reorder ?? ""), price: String(item.price ?? ""),
+      expiry: item.expiry || "", supplier: item.supplier || ""
+    });
+    setEditingId(item.id);
+    setShowForm(true);
+  };
+
+  const saveEdit = async () => {
+    if (!form.name || !form.qty) return;
+    setSaving(true);
+    const before = inventory.find(i => i.id === editingId);
+    await supabase.from("inventory").update({
+      name: form.name, category: form.category, qty: +form.qty, reorder: +form.reorder || 10,
+      price: +form.price || 0, expiry: form.expiry || null, supplier: form.supplier
+    }).eq("id", editingId);
+    const changes = [];
+    if (before) {
+      if (String(before.qty) !== form.qty) changes.push(`qty ${before.qty}→${form.qty}`);
+      if (String(before.price) !== form.price) changes.push(`price ${before.price}→${form.price}`);
+      if ((before.category || "") !== form.category) changes.push(`category ${before.category}→${form.category}`);
+      if ((before.supplier || "") !== form.supplier) changes.push(`supplier ${before.supplier}→${form.supplier}`);
+    }
+    await supabase.from("activity_log").insert([{ staff_id: user.id, staff_name: user.name, action: "Edited drug", details: `${form.name}${changes.length ? " (" + changes.join(", ") + ")" : ""}` }]);
+    resetForm();
+    setEditingId(null);
+    setShowForm(false);
+    setSaving(false);
+    reload();
+  };
+
+  const cancelForm = () => {
+    resetForm();
+    setEditingId(null);
+    setShowForm(false);
   };
 
   const deleteItem = async (item) => {
@@ -505,7 +547,7 @@ const Inventory = ({ inventory, reload, user }) => {
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search drugs…" style={{ padding: "8px 14px", borderRadius: 8, border: `1px solid ${COLORS.border}`, fontSize: 14, outline: "none", width: 160 }} />
           <button onClick={() => setShowScan(true)} style={{ background: COLORS.navy, color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontSize: 14, fontWeight: 600 }}>📸 Scan</button>
-          <button onClick={() => setShowForm(!showForm)} style={{ background: COLORS.teal, color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 14, fontWeight: 600 }}>
+          <button onClick={() => { resetForm(); setEditingId(null); setShowForm(!showForm); }} style={{ background: COLORS.teal, color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 14, fontWeight: 600 }}>
             <Icon name="plus" size={16} /> Add Drug
           </button>
         </div>
@@ -513,7 +555,7 @@ const Inventory = ({ inventory, reload, user }) => {
 
       {showForm && (
         <Card style={{ marginBottom: 20, borderColor: COLORS.teal }}>
-          <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 14, color: COLORS.navy }}>New Drug Entry</h3>
+          <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 14, color: COLORS.navy }}>{editingId ? `Edit Drug — ${form.name}` : "New Drug Entry"}</h3>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 10 }}>
             {[["Drug Name", "name"], ["Category", "category"], ["Quantity", "qty"], ["Reorder Level", "reorder"], ["Unit Price (₹)", "price"], ["Expiry Date", "expiry"], ["Supplier", "supplier"]].map(([label, key]) => (
               <div key={key}>
@@ -523,10 +565,10 @@ const Inventory = ({ inventory, reload, user }) => {
               </div>
             ))}
           </div>
-          {user.role !== "Admin" && <div style={{ fontSize: 12, color: COLORS.amber, marginTop: 10 }}>⚠️ This will be tagged as added by you ({user.name}) for Admin review.</div>}
+          {!editingId && user.role !== "Admin" && <div style={{ fontSize: 12, color: COLORS.amber, marginTop: 10 }}>⚠️ This will be tagged as added by you ({user.name}) for Admin review.</div>}
           <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-            <button onClick={addItem} disabled={saving} style={{ background: COLORS.teal, color: "#fff", border: "none", borderRadius: 8, padding: "8px 20px", cursor: "pointer", fontWeight: 600 }}>{saving ? "Saving…" : "Save"}</button>
-            <button onClick={() => setShowForm(false)} style={{ background: COLORS.slateLight, color: COLORS.slate, border: "none", borderRadius: 8, padding: "8px 20px", cursor: "pointer" }}>Cancel</button>
+            <button onClick={editingId ? saveEdit : addItem} disabled={saving} style={{ background: COLORS.teal, color: "#fff", border: "none", borderRadius: 8, padding: "8px 20px", cursor: "pointer", fontWeight: 600 }}>{saving ? "Saving…" : editingId ? "Save Changes" : "Save"}</button>
+            <button onClick={cancelForm} style={{ background: COLORS.slateLight, color: COLORS.slate, border: "none", borderRadius: 8, padding: "8px 20px", cursor: "pointer" }}>Cancel</button>
           </div>
         </Card>
       )}
@@ -543,7 +585,7 @@ const Inventory = ({ inventory, reload, user }) => {
             </thead>
             <tbody>
               {filtered.map((item, i) => (
-                <tr key={item.id} style={{ background: i % 2 === 0 ? "#fff" : COLORS.white, borderTop: `1px solid ${COLORS.border}` }}>
+                <tr key={item.id} onClick={() => startEdit(item)} style={{ background: i % 2 === 0 ? "#fff" : COLORS.white, borderTop: `1px solid ${COLORS.border}`, cursor: "pointer" }}>
                   <td style={{ padding: "11px 14px", fontWeight: 600, color: COLORS.navy }}>{item.name}</td>
                   <td style={{ padding: "11px 14px", color: COLORS.slate }}>{item.category}</td>
                   <td style={{ padding: "11px 14px", fontWeight: 700, color: item.qty <= item.reorder ? COLORS.red : COLORS.navy }}>{item.qty}</td>
@@ -552,7 +594,7 @@ const Inventory = ({ inventory, reload, user }) => {
                   <td style={{ padding: "11px 14px", color: COLORS.slate }}>{item.expiry || "—"}</td>
                   <td style={{ padding: "11px 14px", color: COLORS.slate }}>{item.supplier || "—"}</td>
                   <td style={{ padding: "11px 14px" }}>{getStatus(item)}</td>
-                  <td style={{ padding: "11px 14px" }}>
+                  <td style={{ padding: "11px 14px" }} onClick={e => e.stopPropagation()}>
                     {canDeleteDrug(user.role) && (
                       <button onClick={() => deleteItem(item)} style={{ background: "none", border: "none", color: COLORS.red, cursor: "pointer" }}><Icon name="x" size={16} /></button>
                     )}
@@ -562,6 +604,7 @@ const Inventory = ({ inventory, reload, user }) => {
             </tbody>
           </table>
         </div>
+        <div style={{ padding: "10px 14px", fontSize: 12, color: COLORS.slate, borderTop: `1px solid ${COLORS.border}` }}>💡 Tap any row to edit its details.</div>
       </Card>
     </div>
   );
