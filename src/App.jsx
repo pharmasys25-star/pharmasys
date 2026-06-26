@@ -380,7 +380,7 @@ Be thorough — scan every row/line in the image, even if the list is long. If y
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 600, color: COLORS.navy, fontSize: 14 }}>{item.name}</div>
                   <div style={{ fontSize: 12, color: COLORS.slate }}>
-                    {item.category} · Qty: {item.qty} · Price: GH₵{item.price}
+                    {item.category} · Qty: {item.qty} · Price: ₹{item.price}
                     {item.expiry ? ` · Exp: ${item.expiry}` : ""}{item.supplier ? ` · ${item.supplier}` : ""}
                   </div>
                 </div>
@@ -414,7 +414,7 @@ const Dashboard = ({ inventory, sales, orders, user }) => {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 14, marginBottom: 28 }}>
         {seeRevenue ? (
-          <StatCard label="Today's Revenue" value={`GH₵${todayRevenue.toFixed(2)}`} sub={`${todaySales.length} transactions`} accent={COLORS.teal} icon="sales" />
+          <StatCard label="Today's Revenue" value={`₹${todayRevenue.toFixed(2)}`} sub={`${todaySales.length} transactions`} accent={COLORS.teal} icon="sales" />
         ) : (
           <StatCard label="Today's Revenue" locked />
         )}
@@ -447,7 +447,7 @@ const Dashboard = ({ inventory, sales, orders, user }) => {
                 <div style={{ fontWeight: 600, color: COLORS.navy }}>{s.item}</div>
                 <div style={{ color: COLORS.slate }}>{s.cashier_name} · {new Date(s.created_at).toLocaleDateString()}</div>
               </div>
-              <span style={{ fontWeight: 700, color: COLORS.teal }}>GH₵{Number(s.total).toFixed(2)}</span>
+              <span style={{ fontWeight: 700, color: COLORS.teal }}>₹{Number(s.total).toFixed(2)}</span>
             </div>
           ))}
         </Card>
@@ -518,7 +518,7 @@ const Inventory = ({ inventory, reload, user }) => {
         <Card style={{ marginBottom: 20, borderColor: COLORS.teal }}>
           <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 14, color: COLORS.navy }}>New Drug Entry</h3>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 10 }}>
-            {[["Drug Name", "name"], ["Category", "category"], ["Quantity", "qty"], ["Reorder Level", "reorder"], ["Unit Price (GH₵)", "price"], ["Expiry Date", "expiry"], ["Supplier", "supplier"]].map(([label, key]) => (
+            {[["Drug Name", "name"], ["Category", "category"], ["Quantity", "qty"], ["Reorder Level", "reorder"], ["Unit Price (₹)", "price"], ["Expiry Date", "expiry"], ["Supplier", "supplier"]].map(([label, key]) => (
               <div key={key}>
                 <label style={{ fontSize: 12, color: COLORS.slate, display: "block", marginBottom: 4 }}>{label}</label>
                 <input type={["qty", "reorder", "price"].includes(key) ? "number" : key === "expiry" ? "date" : "text"} value={form[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
@@ -551,7 +551,7 @@ const Inventory = ({ inventory, reload, user }) => {
                   <td style={{ padding: "11px 14px", color: COLORS.slate }}>{item.category}</td>
                   <td style={{ padding: "11px 14px", fontWeight: 700, color: item.qty <= item.reorder ? COLORS.red : COLORS.navy }}>{item.qty}</td>
                   <td style={{ padding: "11px 14px", color: COLORS.slate }}>{item.reorder}</td>
-                  <td style={{ padding: "11px 14px" }}>GH₵{Number(item.price).toFixed(2)}</td>
+                  <td style={{ padding: "11px 14px" }}>₹{Number(item.price).toFixed(2)}</td>
                   <td style={{ padding: "11px 14px", color: COLORS.slate }}>{item.expiry || "—"}</td>
                   <td style={{ padding: "11px 14px", color: COLORS.slate }}>{item.supplier || "—"}</td>
                   <td style={{ padding: "11px 14px" }}>{getStatus(item)}</td>
@@ -618,8 +618,8 @@ const Sales = ({ sales, inventory, reload, user }) => {
             <strong style={{ color: "#065F46" }}>✅ Sale complete!</strong>
             <button onClick={() => setReceipt(null)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.slate }}><Icon name="x" size={16} /></button>
           </div>
-          {receipt.map((s, idx) => <div key={idx} style={{ fontSize: 13, color: COLORS.navy, marginTop: 6 }}>{s.name} × {s.qty} = GH₵{(s.qty * s.price).toFixed(2)}</div>)}
-          <div style={{ fontWeight: 700, marginTop: 8, color: "#065F46" }}>Total: GH₵{receipt.reduce((a, s) => a + s.qty * s.price, 0).toFixed(2)}</div>
+          {receipt.map((s, idx) => <div key={idx} style={{ fontSize: 13, color: COLORS.navy, marginTop: 6 }}>{s.name} × {s.qty} = ₹{(s.qty * s.price).toFixed(2)}</div>)}
+          <div style={{ fontWeight: 700, marginTop: 8, color: "#065F46" }}>Total: ₹{receipt.reduce((a, s) => a + s.qty * s.price, 0).toFixed(2)}</div>
         </Card>
       )}
 
@@ -630,7 +630,7 @@ const Sales = ({ sales, inventory, reload, user }) => {
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               <select value={drug} onChange={e => setDrug(e.target.value)} style={{ flex: 1, minWidth: 180, padding: "8px 10px", borderRadius: 7, border: `1px solid ${COLORS.border}`, fontSize: 14 }}>
                 <option value="">Select drug…</option>
-                {inventory.filter(i => i.qty > 0).map(i => <option key={i.id} value={i.name}>{i.name} (GH₵{i.price})</option>)}
+                {inventory.filter(i => i.qty > 0).map(i => <option key={i.id} value={i.name}>{i.name} (₹{i.price})</option>)}
               </select>
               <input type="number" min={1} value={qty} onChange={e => setQty(+e.target.value)} style={{ width: 80, padding: "8px 10px", borderRadius: 7, border: `1px solid ${COLORS.border}`, fontSize: 14 }} />
               <button onClick={addToCart} style={{ background: COLORS.teal, color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 600 }}>Add</button>
@@ -648,8 +648,8 @@ const Sales = ({ sales, inventory, reload, user }) => {
                       <tr key={s.id} style={{ borderTop: `1px solid ${COLORS.border}`, background: i % 2 === 0 ? "#fff" : COLORS.white }}>
                         <td style={{ padding: "9px 12px" }}>{s.item}</td>
                         <td style={{ padding: "9px 12px" }}>{s.qty}</td>
-                        <td style={{ padding: "9px 12px" }}>GH₵{Number(s.price).toFixed(2)}</td>
-                        <td style={{ padding: "9px 12px", fontWeight: 700 }}>GH₵{Number(s.total).toFixed(2)}</td>
+                        <td style={{ padding: "9px 12px" }}>₹{Number(s.price).toFixed(2)}</td>
+                        <td style={{ padding: "9px 12px", fontWeight: 700 }}>₹{Number(s.total).toFixed(2)}</td>
                         <td style={{ padding: "9px 12px", color: COLORS.slate }}>{s.cashier_name}</td>
                         <td style={{ padding: "9px 12px", color: COLORS.slate }}>{new Date(s.created_at).toLocaleDateString()}</td>
                       </tr>
@@ -672,12 +672,12 @@ const Sales = ({ sales, inventory, reload, user }) => {
             <>
               {cart.map(item => (
                 <div key={item.name} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: `1px solid ${COLORS.border}`, fontSize: 13 }}>
-                  <div><div style={{ fontWeight: 600 }}>{item.name}</div><div style={{ color: COLORS.slate }}>× {item.qty} @ GH₵{item.price}</div></div>
-                  <span style={{ fontWeight: 700, color: COLORS.teal }}>GH₵{(item.qty * item.price).toFixed(2)}</span>
+                  <div><div style={{ fontWeight: 600 }}>{item.name}</div><div style={{ color: COLORS.slate }}>× {item.qty} @ ₹{item.price}</div></div>
+                  <span style={{ fontWeight: 700, color: COLORS.teal }}>₹{(item.qty * item.price).toFixed(2)}</span>
                 </div>
               ))}
               <div style={{ display: "flex", justifyContent: "space-between", marginTop: 12, fontWeight: 700, fontSize: 16 }}>
-                <span>Total</span><span style={{ color: COLORS.teal }}>GH₵{cartTotal.toFixed(2)}</span>
+                <span>Total</span><span style={{ color: COLORS.teal }}>₹{cartTotal.toFixed(2)}</span>
               </div>
               <button onClick={checkout} style={{ width: "100%", marginTop: 14, background: COLORS.navy, color: "#fff", border: "none", borderRadius: 8, padding: "11px", cursor: "pointer", fontWeight: 700, fontSize: 15 }}>Checkout</button>
             </>
@@ -738,7 +738,7 @@ const Orders = ({ orders, reload, user }) => {
         <Card style={{ marginBottom: 20, borderColor: COLORS.teal }}>
           <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 14, color: COLORS.navy }}>New Purchase Order</h3>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 10 }}>
-            {[["Supplier", "supplier"], ["Drug", "drug"], ["Quantity", "qty"], ["Total Cost (GH₵)", "cost"]].map(([label, key]) => (
+            {[["Supplier", "supplier"], ["Drug", "drug"], ["Quantity", "qty"], ["Total Cost (₹)", "cost"]].map(([label, key]) => (
               <div key={key}>
                 <label style={{ fontSize: 12, color: COLORS.slate, display: "block", marginBottom: 4 }}>{label}</label>
                 <input value={form[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} style={{ width: "100%", padding: "8px 10px", borderRadius: 7, border: `1px solid ${COLORS.border}`, fontSize: 14, boxSizing: "border-box" }} />
@@ -761,7 +761,7 @@ const Orders = ({ orders, reload, user }) => {
                 <Badge label={o.status} color={statusColor(o.status)} />
               </div>
               <div style={{ fontWeight: 700, color: COLORS.navy }}>{o.drug}</div>
-              <div style={{ fontSize: 13, color: COLORS.slate }}>Supplier: {o.supplier} · Qty: {o.qty} · GH₵{Number(o.cost).toFixed(2)} · Ordered by {o.created_by_name}</div>
+              <div style={{ fontSize: 13, color: COLORS.slate }}>Supplier: {o.supplier} · Qty: {o.qty} · ₹{Number(o.cost).toFixed(2)} · Ordered by {o.created_by_name}</div>
             </div>
             {o.status !== "Delivered" && (
               <div style={{ display: "flex", gap: 8 }}>
@@ -789,16 +789,16 @@ const Reports = ({ sales, inventory, orders }) => {
     <div>
       <h2 style={{ fontSize: 20, fontWeight: 700, color: COLORS.navy, marginBottom: 20 }}>Reports & Analytics</h2>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 14, marginBottom: 24 }}>
-        <StatCard label="Total Revenue" value={`GH₵${totalRevenue.toFixed(2)}`} accent={COLORS.teal} icon="sales" />
+        <StatCard label="Total Revenue" value={`₹${totalRevenue.toFixed(2)}`} accent={COLORS.teal} icon="sales" />
         <StatCard label="Low Stock SKUs" value={lowStock} accent={COLORS.amber} icon="alert" />
-        <StatCard label="Total Purchases" value={`GH₵${totalOrdersCost.toLocaleString()}`} accent={COLORS.navy} icon="orders" />
+        <StatCard label="Total Purchases" value={`₹${totalOrdersCost.toLocaleString()}`} accent={COLORS.navy} icon="orders" />
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         <Card>
           <h3 style={{ fontSize: 15, fontWeight: 700, color: COLORS.navy, marginBottom: 14 }}>Revenue by Day</h3>
           {Object.entries(salesByDay).sort().map(([date, rev]) => (
             <div key={date} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: `1px solid ${COLORS.border}` }}>
-              <span style={{ fontSize: 13, color: COLORS.slate }}>{date}</span><span style={{ fontWeight: 700, color: COLORS.teal }}>GH₵{rev.toFixed(2)}</span>
+              <span style={{ fontSize: 13, color: COLORS.slate }}>{date}</span><span style={{ fontWeight: 700, color: COLORS.teal }}>₹{rev.toFixed(2)}</span>
             </div>
           ))}
         </Card>
@@ -819,7 +819,7 @@ const Reports = ({ sales, inventory, orders }) => {
           <h3 style={{ fontSize: 15, fontWeight: 700, color: COLORS.navy, marginBottom: 14 }}>Top Selling Drugs</h3>
           {Object.entries(sales.reduce((acc, s) => { acc[s.item] = (acc[s.item] || 0) + Number(s.total); return acc; }, {})).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, rev]) => (
             <div key={name} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: `1px solid ${COLORS.border}`, fontSize: 14 }}>
-              <span>{name}</span><span style={{ fontWeight: 700, color: COLORS.navy }}>GH₵{rev.toFixed(2)}</span>
+              <span>{name}</span><span style={{ fontWeight: 700, color: COLORS.navy }}>₹{rev.toFixed(2)}</span>
             </div>
           ))}
         </Card>
